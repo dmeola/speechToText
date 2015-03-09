@@ -1,17 +1,37 @@
-/* jshint devel:true */
+/*	Speech recognition experiment
+*	@author: Daniel Meola
+*	@description: listens to and displays dictation via microphone
+*/
+
 var speech = {history:''};
+// new instance of speech recognition
+var recognition = new webkitSpeechRecognition();
+// set params
+recognition.continuous = true;
+recognition.interimResults = false;
+recognition.start();
 
 
 speech.record = function(words){
-	$(document).trigger('recording', function(){
-		console.log('recording now');
-	});
 	speech.history += words;
 	$('textarea').html(speech.history);
+	$(document).trigger('recording');
 }
 
 speech.play = function(){
 	return speech.history;
+}
+
+speech.clear = function(){
+	speech.history = '';
+	$(document).trigger('cleared');
+}
+
+//receive acknowledgement
+speech.acknowledge = function(){
+	speech.ignore();
+	speech.speak('Roger that');
+	setTimeout(function(){speech.listen()}, 2000);
 }
 
 speech.speak = function speak(textToSpeak) {
@@ -26,15 +46,7 @@ speech.speak = function speak(textToSpeak) {
    window.speechSynthesis.speak(newUtterance);
 }
 
-
-// new instance of speech recognition
-var recognition = new webkitSpeechRecognition();
-// set params
-recognition.continuous = true;
-recognition.interimResults = false;
-recognition.start();
-
-speech.recognition = recognition.onresult = function(event){
+speech.result = function(event){
   // delve into words detected results & get the latest
   // total results detected
   var resultsLength = event.results.length -1 ;
@@ -46,11 +58,21 @@ speech.recognition = recognition.onresult = function(event){
   speech.record(saidWord);
 }
 
+//call this to start listening
+speech.listen = function(){
+	recognition.onresult = speech.result;
+}
+
+//call this in order to halt listening
+speech.ignore = function(){
+	recognition.onresult = '';
+}
+
 speech.init = function(){
-	//speech.speak();
-	//speech.recognition();
-	$('.clear').on('click', function(){$('textarea').html('')});
-	$(document).on('recording', speech.speak(speech.play()));
+	$('.clear').on('click', function(){speech.clear()});
+	$(document).on('recording', function(){speech.acknowledge()});
+	$(document).on('cleared', function(){$('textarea').val('')});
+	speech.listen();
 }
 
 $(document).ready(function(){
